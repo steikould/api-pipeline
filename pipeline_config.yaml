@@ -1,0 +1,35 @@
+# pipeline_config.yaml
+pipeline:
+  name: "sample_api_pipeline"
+  version: "1.0"
+
+apis:
+  - name: "httpbin"
+    base_url: "https://httpbin.org"
+    auth:
+      type: "basic"
+      username_secret: "unused"
+      password_secret: "unused"
+    endpoints:
+      - path: "/get"
+        method: "GET"
+    schema:
+      type: "json_schema"
+      file: "api_pipeline/schemas/httpbin_schema.json"
+
+destinations:
+  - name: "gcs_raw"
+    type: "gcs"
+    bucket: "my-data-bucket"
+    prefix: "raw_data/"
+    format: "json"
+
+routing:
+  - api: "httpbin"
+    destinations: ["gcs_raw"]
+
+settings:
+  project_id: "my-gcp-project"
+  max_concurrent_requests: 10
+  retry_attempts: 3
+  timeout_seconds: 30

@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "args": { "type": "object" },
+    "headers": { "type": "object" },
+    "origin": { "type": "string" },
+    "url": { "type": "string" }
+  },
+  "required": ["args", "headers", "origin", "url"]
+}
