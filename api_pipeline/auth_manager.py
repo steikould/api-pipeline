@@ -1,23 +1,23 @@
 from abc import ABC, abstractmethod
-import aiohttp
+import httpx
 
 class AuthManager(ABC):
     """Abstract base class for authentication managers."""
 
     @abstractmethod
-    async def get_auth(self) -> aiohttp.BasicAuth:
-        """Returns the authentication object for aiohttp."""
+    async def get_auth(self) -> httpx.Auth:
+        """Returns the authentication object for httpx."""
         pass
 
 class BasicAuthManager(AuthManager):
     """Authentication manager for Basic Auth."""
 
     def __init__(self, auth_config: dict):
-        self.username_secret = auth_config.get("username_secret")
-        self.password_secret = auth_config.get("password_secret")
+        self.username_secret = auth_config.username_secret
+        self.password_secret = auth_config.password_secret
 
-    async def get_auth(self) -> aiohttp.BasicAuth:
-        """Returns the BasicAuth object for aiohttp.
+    async def get_auth(self) -> httpx.Auth:
+        """Returns the BasicAuth object for httpx.
 
         Note: This is a placeholder and does not yet retrieve secrets from
         Google Secrets Manager.
@@ -25,17 +25,17 @@ class BasicAuthManager(AuthManager):
         # TODO: Retrieve secrets from Google Secrets Manager
         username = "test_user"
         password = "test_password"
-        return aiohttp.BasicAuth(login=username, password=password)
+        return httpx.BasicAuth(username=username, password=password)
 
 class CertificateAuthManager(AuthManager):
     """Authentication manager for Certificate Auth."""
 
     def __init__(self, auth_config: dict):
-        self.cert_secret = auth_config.get("cert_secret")
-        self.key_secret = auth_config.get("key_secret")
+        self.cert_secret = auth_config.cert_secret
+        self.key_secret = auth_config.key_secret
 
-    async def get_auth(self) -> aiohttp.BasicAuth:
-        """Returns the authentication object for aiohttp.
+    async def get_auth(self) -> httpx.Auth:
+        """Returns the authentication object for httpx.
 
         Note: This is a placeholder and does not yet retrieve secrets from
         Google Secrets Manager or handle certificate-based auth.
@@ -43,7 +43,7 @@ class CertificateAuthManager(AuthManager):
         # TODO: Implement certificate-based auth
         return None
 
-def get_auth_manager(auth_config: dict) -> AuthManager:
+def get_auth_manager(auth_config) -> AuthManager:
     """Returns the appropriate authentication manager for the given config.
 
     Args:
@@ -52,7 +52,7 @@ def get_auth_manager(auth_config: dict) -> AuthManager:
     Returns:
         An instance of the appropriate AuthManager.
     """
-    auth_type = auth_config.get("type")
+    auth_type = auth_config.type
     if auth_type == "basic":
         return BasicAuthManager(auth_config)
     elif auth_type == "certificate":

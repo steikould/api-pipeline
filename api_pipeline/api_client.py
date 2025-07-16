@@ -1,14 +1,15 @@
-import aiohttp
+import httpx
 from . import auth_manager
+from .config import ApiConfig, EndpointConfig
 
 class ApiClient:
     """A client for making API requests."""
 
-    def __init__(self, api_config: dict):
-        self.base_url = api_config.get("base_url")
-        self.auth_manager = auth_manager.get_auth_manager(api_config.get("auth", {}))
+    def __init__(self, api_config: ApiConfig):
+        self.base_url = api_config.base_url
+        self.auth_manager = auth_manager.get_auth_manager(api_config.auth)
 
-    async def make_request(self, endpoint: dict) -> dict:
+    async def make_request(self, endpoint: EndpointConfig) -> dict:
         """Makes a request to the API.
 
         Args:
@@ -17,13 +18,13 @@ class ApiClient:
         Returns:
             The JSON response from the API.
         """
-        async with aiohttp.ClientSession() as session:
+        async with httpx.AsyncClient() as client:
             auth = await self.auth_manager.get_auth()
-            url = f"{self.base_url}{endpoint.get('path')}"
-            method = endpoint.get("method", "GET").upper()
+            url = f"{self.base_url}{endpoint.path}"
+            method = endpoint.method.upper()
 
-            async with session.request(
+            response = await client.request(
                 method, url, auth=auth
-            ) as response:
-                response.raise_for_status()
-                return await response.json()
+            )
+            response.raise_for_status()
+            return response.json()
