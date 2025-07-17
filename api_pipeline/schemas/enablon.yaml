@@ -1,0 +1,113 @@
+# config/enablon.yaml
+pipeline:
+  name: "enablon_incidents"
+  description: "Pull Enablon incident and compliance data"
+  schedule: "0 */8 * * *"  # Every 8 hours
+  enabled: true
+
+source:
+  type: "rest_api"
+  base_url: "https://your-company.enablon.com"
+  authentication:
+    type: "basic"
+    username: "${ENABLON_USERNAME}"
+    password: "${ENABLON_PASSWORD}"
+  
+  endpoints:
+    - name: "incidents"
+      path: "/api/v1/incidents"
+      method: "GET"
+      params:
+        limit: 100
+        status: "open,closed"
+        modified_since: "2024-01-01"
+      headers:
+        Accept: "application/json"
+        Content-Type: "application/json"
+      pagination:
+        type: "offset"
+        offset_param: "offset"
+        limit_param: "limit"
+        total_path: "total"
+      
+    - name: "compliance_assessments"
+      path: "/api/v1/compliance/assessments"
+      method: "GET"
+      params:
+        limit: 100
+        assessment_type: "all"
+      headers:
+        Accept: "application/json"
+        
+    - name: "risk_assessments"
+      path: "/api/v1/risk/assessments"
+      method: "GET"
+      params:
+        limit: 100
+        risk_level: "high,medium,low"
+      depends_on: ["incidents"]  # Run after incidents
+
+  rate_limiting:
+    requests_per_minute: 60
+    burst_limit: 5
+    backoff_strategy: "exponential"
+    
+  retry:
+    max_attempts: 3
+    delay: 2
+    backoff_multiplier: 2
+    retry_on_status: [429, 500, 502, 503, 504]
+
+transformation:
+  - type: "rename_fields"
+    mapping:
+      "incident_id": "external_incident_id"
+      "created_date": "created_at"
+      "modified_date": "updated_at"
+      "severity_level": "severity"
+      
+  - type: "add_metadata"
+    fields:
+      extracted_at: "{{ now() }}"
+      source_system: "enablon"
+      
+  - type: "filter"
+    condition: "severity is not null"
+    
+  - type: "custom_function"
+    function: "normalize_incident_data"
+    module: "transformations.enablon"
+
+destination:
+  type: "cloud_storage"
+  provider: "aws_s3"
+  bucket: "corporate-data-lake"
+  path: "raw/enablon/incidents/{date}"
+  format: "parquet"
+  partition_by: ["extracted_date", "severity"]
+  
+notifications:
+  on_success:
+    - type: "slack"
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+      channel: "#ehs-data"
+      
+  on_failure:
+    - type: "email"
+      recipients: ["ehs-team@company.com", "data-team@company.com"]
+      subject: "Enablon Pipeline Failed: {{ pipeline.name }}"
+      
+monitoring:
+  metrics:
+    - incident_count
+    - compliance_score
+    - processing_time
+    - api_response_time
+    
+  alerts:
+    - condition: "incident_count > 50"
+      action: "send_alert"
+      severity: "medium"
+    - condition: "error_rate > 0.1"
+      action: "send_alert"
+      severity: "high"

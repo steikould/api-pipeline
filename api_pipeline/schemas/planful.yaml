@@ -1,0 +1,115 @@
+# config/planful.yaml
+pipeline:
+  name: "planful_financial_data"
+  description: "Pull Planful budgets, forecasts, and actuals"
+  schedule: "0 6 * * *"  # Daily at 6 AM
+  enabled: true
+
+source:
+  type: "rest_api"
+  base_url: "https://api.planful.com"
+  authentication:
+    type: "bearer_token"
+    token: "${PLANFUL_API_TOKEN}"
+    
+  endpoints:
+    - name: "budgets"
+      path: "/v1/budgets"
+      method: "GET"
+      params:
+        fiscal_year: "2024"
+        department: "all"
+        status: "approved,draft"
+      headers:
+        Accept: "application/json"
+        X-API-Version: "1.0"
+      pagination:
+        type: "cursor"
+        cursor_param: "next_cursor"
+        cursor_path: "meta.next_cursor"
+        
+    - name: "forecasts"
+      path: "/v1/forecasts"
+      method: "GET"
+      params:
+        fiscal_year: "2024"
+        forecast_type: "rolling,annual"
+      headers:
+        Accept: "application/json"
+        X-API-Version: "1.0"
+        
+    - name: "actuals"
+      path: "/v1/actuals"
+      method: "GET"
+      params:
+        period: "current_year"
+        granularity: "monthly"
+      headers:
+        Accept: "application/json"
+        X-API-Version: "1.0"
+      depends_on: ["budgets"]  # Run after budgets for comparison
+        
+  rate_limiting:
+    requests_per_minute: 120
+    burst_limit: 15
+    
+  retry:
+    max_attempts: 3
+    delay: 1.5
+
+transformation:
+  - type: "rename_fields"
+    mapping:
+      "budget_id": "external_budget_id"
+      "created_timestamp": "created_at"
+      "last_modified": "updated_at"
+      "fiscal_period": "period"
+      
+  - type: "add_metadata"
+    fields:
+      extracted_at: "{{ now() }}"
+      source_system: "planful"
+      data_type: "financial"
+      
+  - type: "custom_function"
+    function: "convert_currency_amounts"
+    module: "transformations.planful"
+    
+  - type: "filter"
+    condition: "amount != 0"
+
+destination:
+  type: "cloud_storage"
+  provider: "azure_blob"
+  container: "financial-data"
+  path: "planful/{data_type}/{fiscal_year}/{month}"
+  format: "parquet"
+  partition_by: ["fiscal_year", "department"]
+
+notifications:
+  on_success:
+    - type: "teams"
+      webhook_url: "${TEAMS_WEBHOOK_URL}"
+      
+  on_failure:
+    - type: "email"
+      recipients: ["finance-team@company.com", "data-team@company.com"]
+      subject: "Planful Pipeline Failed: {{ pipeline.name }}"
+    - type: "slack"
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+      channel: "#finance-alerts"
+
+monitoring:
+  metrics:
+    - budget_variance
+    - forecast_accuracy
+    - record_count
+    - processing_time
+    
+  alerts:
+    - condition: "budget_variance > 0.15"
+      action: "send_alert"
+      severity: "medium"
+    - condition: "record_count < 100"
+      action: "send_alert"
+      severity: "low"
