@@ -1,11 +1,8 @@
-fastapi
 pydantic
 httpx
-celery[redis]
 google-cloud-secret-manager
 google-cloud-storage
 google-cloud-bigquery
 google-cloud-pubsub
 pyyaml
 jsonschema
-uvicorn

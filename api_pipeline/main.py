@@ -1,10 +1,19 @@
-from fastapi import FastAPI
-from .celery_worker import run_pipeline_task
+import argparse
+import asyncio
+from . import pipeline
 
-app = FastAPI()
+def main():
+    """The main entry point for the command-line interface."""
+    parser = argparse.ArgumentParser(description="API Pipeline")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="pipeline_config.yaml",
+        help="The path to the pipeline configuration file.",
+    )
+    args = parser.parse_args()
 
-@app.post("/trigger-pipeline")
-async def trigger_pipeline():
-    """Triggers the API pipeline."""
-    run_pipeline_task.delay()
-    return {"message": "Pipeline task triggered successfully"}
+    asyncio.run(pipeline.run_pipeline(args.config))
+
+if __name__ == "__main__":
+    main()
