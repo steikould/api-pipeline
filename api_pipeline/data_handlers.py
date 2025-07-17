@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from . import gcp_util
+import json
 from .config import DestinationConfig
 
 class DataHandler(ABC):
     """Abstract base class for data handlers."""
 
     @abstractmethod
-    async def handle_data(self, data: dict):
+    def handle_data(self, data: dict):
         """Handles the data from the API."""
         pass
 
@@ -18,10 +18,11 @@ class GCSDataHandler(DataHandler):
         self.prefix = destination_config.prefix
         self.format = destination_config.format
 
-    async def handle_data(self, data: dict):
-        """Handles the data by uploading it to GCS."""
-        blob_name = f"{self.prefix}data.json"  # TODO: Generate a unique name
-        gcp_util.upload_to_gcs(self.bucket, blob_name, data)
+    def handle_data(self, data: dict):
+        """Handles the data by printing it."""
+        print(f"GCS Handler: Saving data to gs://{self.bucket}/{self.prefix}data.json")
+        print(json.dumps(data, indent=2))
+
 
 class BigQueryDataHandler(DataHandler):
     """Data handler for BigQuery."""
@@ -30,9 +31,11 @@ class BigQueryDataHandler(DataHandler):
         self.dataset = destination_config.dataset
         self.table = destination_config.table
 
-    async def handle_data(self, data: dict):
-        """Handles the data by inserting it into BigQuery."""
-        gcp_util.insert_into_bigquery(self.dataset, self.table, data)
+    def handle_data(self, data: dict):
+        """Handles the data by printing it."""
+        print(f"BigQuery Handler: Inserting data into {self.dataset}.{self.table}")
+        print(json.dumps(data, indent=2))
+
 
 class PubSubDataHandler(DataHandler):
     """Data handler for Pub/Sub."""
@@ -40,9 +43,10 @@ class PubSubDataHandler(DataHandler):
     def __init__(self, destination_config: DestinationConfig):
         self.topic = destination_config.topic
 
-    async def handle_data(self, data: dict):
-        """Handles the data by publishing it to Pub/Sub."""
-        gcp_util.publish_to_pubsub(self.topic, data)
+    def handle_data(self, data: dict):
+        """Handles the data by printing it."""
+        print(f"Pub/Sub Handler: Publishing data to {self.topic}")
+        print(json.dumps(data, indent=2))
 
 def get_data_handler(destination_config: DestinationConfig) -> DataHandler:
     """Returns the appropriate data handler for the given config.

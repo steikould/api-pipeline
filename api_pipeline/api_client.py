@@ -9,7 +9,7 @@ class ApiClient:
         self.base_url = api_config.base_url
         self.auth_manager = auth_manager.get_auth_manager(api_config.auth)
 
-    async def make_request(self, endpoint: EndpointConfig) -> dict:
+    def make_request(self, endpoint: EndpointConfig) -> dict:
         """Makes a request to the API.
 
         Args:
@@ -18,12 +18,12 @@ class ApiClient:
         Returns:
             The JSON response from the API.
         """
-        async with httpx.AsyncClient() as client:
-            auth = await self.auth_manager.get_auth()
+        with httpx.Client() as client:
+            auth = self.auth_manager.get_auth()
             url = f"{self.base_url}{endpoint.path}"
             method = endpoint.method.upper()
 
-            response = await client.request(
+            response = client.request(
                 method, url, auth=auth
             )
             response.raise_for_status()

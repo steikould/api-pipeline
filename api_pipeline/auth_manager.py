@@ -5,7 +5,7 @@ class AuthManager(ABC):
     """Abstract base class for authentication managers."""
 
     @abstractmethod
-    async def get_auth(self) -> httpx.Auth:
+    def get_auth(self) -> httpx.Auth:
         """Returns the authentication object for httpx."""
         pass
 
@@ -16,7 +16,7 @@ class BasicAuthManager(AuthManager):
         self.username_secret = auth_config.username_secret
         self.password_secret = auth_config.password_secret
 
-    async def get_auth(self) -> httpx.Auth:
+    def get_auth(self) -> httpx.Auth:
         """Returns the BasicAuth object for httpx.
 
         Note: This is a placeholder and does not yet retrieve secrets from
@@ -34,7 +34,7 @@ class CertificateAuthManager(AuthManager):
         self.cert_secret = auth_config.cert_secret
         self.key_secret = auth_config.key_secret
 
-    async def get_auth(self) -> httpx.Auth:
+    def get_auth(self) -> httpx.Auth:
         """Returns the authentication object for httpx.
 
         Note: This is a placeholder and does not yet retrieve secrets from
