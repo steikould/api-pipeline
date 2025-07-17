@@ -1,3 +1,4 @@
+apache-beam[gcp]
 pydantic
 httpx
 google-cloud-secret-manager
