@@ -1,4 +1,3 @@
-import asyncio
 from . import config
 from .api_client import ApiClient
 from .schema_validator import SchemaValidator
@@ -7,7 +6,7 @@ from .logger import setup_logger
 
 logger = setup_logger()
 
-async def run_pipeline(config_path: str):
+def run_pipeline(config_path: str):
     """The main entry point for the pipeline."""
     try:
         pipeline_config = config.load_config(config_path)
@@ -26,7 +25,7 @@ async def run_pipeline(config_path: str):
 
         for endpoint in api_config.endpoints:
             try:
-                data = await api_client.make_request(endpoint)
+                data = api_client.make_request(endpoint)
                 logger.info(f"Successfully retrieved data from {api_config.name}{endpoint.path}")
             except Exception as e:
                 logger.error(f"Error retrieving data from {api_config.name}{endpoint.path}: {e}")
@@ -46,7 +45,7 @@ async def run_pipeline(config_path: str):
                             if dest_config.name == dest_name:
                                 try:
                                     handler = get_data_handler(dest_config)
-                                    await handler.handle_data(data)
+                                    handler.handle_data(data)
                                     logger.info(f"Successfully handled data for destination {dest_name}")
                                 except Exception as e:
                                     logger.error(f"Error handling data for destination {dest_name}: {e}")

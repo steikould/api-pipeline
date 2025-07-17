@@ -1,5 +1,4 @@
 import argparse
-import asyncio
 from . import pipeline
 
 def main():
@@ -13,7 +12,7 @@ def main():
     )
     args = parser.parse_args()
 
-    asyncio.run(pipeline.run_pipeline(args.config))
+    pipeline.run_pipeline(args.config)
 
 if __name__ == "__main__":
     main()
